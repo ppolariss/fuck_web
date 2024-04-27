@@ -324,8 +324,8 @@ class Game {
 		// calculate mouse position in normalized device coordinates
 		// (-1 to +1) for both components
 		const mouse = new THREE.Vector2();
-		mouse.x = (event.clientX / this.renderer.domElement.width) * 2 - 1;
-		mouse.y = - (event.clientY / this.renderer.domElement.height) * 2 + 1;
+		mouse.x = (event.clientX / this.renderer.domElement.clientWidth) * 2 - 1;
+		mouse.y = - (event.clientY / this.renderer.domElement.clientHeight) * 2 + 1;
 
 		const raycaster = new THREE.Raycaster();
 		raycaster.setFromCamera(mouse, this.camera);
@@ -347,18 +347,18 @@ class Game {
 				this.speechBubble.update('');
 				this.scene.add(this.speechBubble.mesh);
 				this.chatSocketId = player.id;
-				// chat.style.bottom = '0px';
+				chat.style.bottom = '0px';
 				this.activeCamera = this.cameras.chat;
 			}
 		} else {
 			//Is the chat panel visible?
 			if (chat.style.bottom == '0px' && (window.innerHeight - event.clientY) > 40) {
 				console.log("onMouseDown: No player found");
-				// if (this.speechBubble.mesh.parent!==null) this.speechBubble.mesh.parent.remove(this.speechBubble.mesh);
-				// delete this.speechBubble.player;
-				// delete this.chatSocketId;
-				// chat.style.bottom = '-50px';
-				// this.activeCamera = this.cameras.back;
+				if (this.speechBubble.mesh.parent !== null) this.speechBubble.mesh.parent.remove(this.speechBubble.mesh);
+				delete this.speechBubble.player;
+				delete this.chatSocketId;
+				chat.style.bottom = '-50px';
+				this.activeCamera = this.cameras.back;
 			} else {
 				console.log("onMouseDown: typing");
 			}
@@ -544,11 +544,9 @@ class PlayerLocal extends Player {
 		super(game, model);
 
 		const player = this;
-		const socket = io();
+		const socket = io.connect();
 		socket.on('setId', function (data) {
-			console.log(`socket.id: ${data.id}`);
 			player.id = data.id;
-			console.log(`PlayerLocal.constructor: ${player.id}`);
 		});
 		socket.on('remoteData', function (data) {
 			game.remoteData = data;
@@ -564,16 +562,17 @@ class PlayerLocal extends Player {
 				if (index != -1) {
 					game.remotePlayers.splice(index, 1);
 					game.scene.remove(players[0].object);
-				} else {
-					index = game.initialisingPlayers.indexOf(data.id);
-					if (index != -1) {
-						const player = game.initialisingPlayers[index];
-						player.deleted = true;
-						game.initialisingPlayers.splice(index, 1);
-					}
+				}
+			} else {
+				index = game.initialisingPlayers.indexOf(data.id);
+				if (index != -1) {
+					const player = game.initialisingPlayers[index];
+					player.deleted = true;
+					game.initialisingPlayers.splice(index, 1);
 				}
 			}
-		})
+		});
+
 		socket.on('chat message', function (data) {
 			document.getElementById('chat').style.bottom = '0px';
 			const player = game.getRemotePlayerById(data.id);
@@ -582,22 +581,9 @@ class PlayerLocal extends Player {
 			game.activeCamera = game.cameras.chat;
 			game.speechBubble.update(data.message);
 		});
-		// $(function () {
-		// 	var socket = io();
-		// 	$('form').submit(function () {
-		// 		socket.emit('chat message', $('#m').val());
-		// 		$('#m').val('');
-		// 		return false;
-		// 	});
-		// 	socket.on('chat message', function (msg) {
-		// 		$('#messages').append($('<li>').text(msg));
-		// 	});
-		// });
-		$('#msg-form').submit(function () {
-			// console.log(`player id: ${player.id}`)
-			// console.log($('#m').val());
-			// game.chatSocketId
-			socket.emit('chat message', { id:player.id, message:$('#m').val() });
+
+		$('#msg-form').submit(function (e) {
+			socket.emit('chat message', { id: game.chatSocketId, message: $('#m').val() });
 			$('#m').val('');
 			return false;
 		});
@@ -749,7 +735,6 @@ class SpeechBubble {
 	}
 
 	update(msg) {
-		console.log(`SpeechBubble.update: ${msg}`);
 		if (this.mesh === undefined) return;
 
 		let context = this.context;
