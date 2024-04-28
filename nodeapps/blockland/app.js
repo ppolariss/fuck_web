@@ -17,10 +17,14 @@ io.sockets.on('connection', function(socket){
 	socket.emit('setId', { id:socket.id });
 	
     socket.on('disconnect', function(){
-		socket.broadcast.emit('deletePlayer', { id: socket.id });
+		console.log(`roomID: ${socket.id} in ${socket.roomID} disconnected`);
+		socket.to(socket.roomID).emit('deletePlayer', { id: socket.id });
+		// socket.broadcast.emit('deletePlayer', { id: socket.id });
     });	
 	
 	socket.on('init', function(data){
+		socket.join(data.roomID);
+		socket.roomID = data.roomID;
 		console.log(`socket.init ${data.model}`);
 		socket.userData.model = data.model;
 		socket.userData.colour = data.colour;
@@ -53,14 +57,19 @@ http.listen(3000, function(){
 });
 
 setInterval(function(){
+	console.log( io.of("/").adapter.rooms);
+	// const nsp = io.of('/').adapter.rooms;
 	const nsp = io.of('/');
-    let pack = [];
+	let pack = {};
+    // let pack = [];
 	
     for(let id in io.sockets.sockets){
         const socket = nsp.connected[id];
 		//Only push sockets that have been initialised
+		// only push same room pack
 		if (socket.userData.model!==undefined){
-			pack.push({
+			if (pack[socket.roomID]===undefined||pack[socket.roomID]==undefined) pack[socket.roomID] = [];
+			pack[socket.roomID].push({
 				id: socket.id,
 				model: socket.userData.model,
 				colour: socket.userData.colour,
@@ -70,8 +79,19 @@ setInterval(function(){
 				heading: socket.userData.heading,
 				pb: socket.userData.pb,
 				action: socket.userData.action
-			});    
+			});
+			// pack.push({
+			// 	id: socket.id,
+			// 	model: socket.userData.model,
+			// 	colour: socket.userData.colour,
+			// 	x: socket.userData.x,
+			// 	y: socket.userData.y,
+			// 	z: socket.userData.z,
+			// 	heading: socket.userData.heading,
+			// 	pb: socket.userData.pb,
+			// 	action: socket.userData.action
+			// });    
 		}
     }
-	if (pack.length>0) io.emit('remoteData', pack);
+	if (pack.length>0) {io.emit('remoteData', pack);}
 }, 40);

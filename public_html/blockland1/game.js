@@ -125,7 +125,7 @@ class Game {
 		const loader = new THREE.FBXLoader();
 		const game = this;
 
-		this.player = new PlayerLocal(this, undefined, { model: modelConfig.model, colour: modelConfig.colour });
+		this.player = new PlayerLocal(this, undefined, modelConfig);// { model: modelConfig.model, colour: modelConfig.colour }
 
 		this.loadEnvironment(loader);
 
@@ -428,7 +428,7 @@ class Player {
 		this.local = true;
 		let model, colour;
 
-		if (modelConfig.colour) {
+		if (modelConfig && modelConfig.colour) {
 			console.log("modelConfig.colour", modelConfig.colour)
 			colour = modelConfig.colour;
 		} else {
@@ -438,7 +438,7 @@ class Player {
 		}
 
 		if (options === undefined) {
-			if (modelConfig.model) {
+			if (modelConfig && modelConfig.model) {
 				console.log("modelConfig.model", modelConfig.model)
 				model = modelConfig.model;
 			}
@@ -501,7 +501,7 @@ class Player {
 				game.createCameras();
 				game.sun.target = game.player.object;
 				game.animations.Idle = object.animations[0];
-				if (player.initSocket !== undefined) player.initSocket();
+				if (player.initSocket !== undefined) player.initSocket(modelConfig.room);
 			} else {
 				const geometry = new THREE.BoxGeometry(100, 300, 100);
 				const material = new THREE.MeshBasicMaterial({ visible: false });
@@ -570,24 +570,28 @@ class PlayerLocal extends Player {
 			game.remoteData = data;
 		});
 		socket.on('deletePlayer', function (data) {
-			const players = game.remotePlayers.filter(function (player) {
-				if (player.id == data.id) {
-					return player;
+			try {
+				const players = game.remotePlayers.filter(function (player) {
+					if (player.id == data.id) {
+						return player;
+					}
+				});
+				if (players.length > 0) {
+					let index = game.remotePlayers.indexOf(players[0]);
+					if (index != -1) {
+						game.remotePlayers.splice(index, 1);
+						game.scene.remove(players[0].object);
+					}
+				} else {
+					index = game.initialisingPlayers.indexOf(data.id);
+					if (index != -1) {
+						const player = game.initialisingPlayers[index];
+						player.deleted = true;
+						game.initialisingPlayers.splice(index, 1);
+					}
 				}
-			});
-			if (players.length > 0) {
-				let index = game.remotePlayers.indexOf(players[0]);
-				if (index != -1) {
-					game.remotePlayers.splice(index, 1);
-					game.scene.remove(players[0].object);
-				}
-			} else {
-				index = game.initialisingPlayers.indexOf(data.id);
-				if (index != -1) {
-					const player = game.initialisingPlayers[index];
-					player.deleted = true;
-					game.initialisingPlayers.splice(index, 1);
-				}
+			} catch (e) {
+				console.log(e);
 			}
 		});
 
@@ -609,9 +613,11 @@ class PlayerLocal extends Player {
 		this.socket = socket;
 	}
 
-	initSocket() {
+	initSocket(roomID) {
+		console.log(roomID);
 		//console.log("PlayerLocal.initSocket");
 		this.socket.emit('init', {
+			roomID: roomID,
 			model: this.model,
 			colour: this.colour,
 			x: this.object.position.x,
