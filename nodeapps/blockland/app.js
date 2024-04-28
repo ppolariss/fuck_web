@@ -89,11 +89,10 @@ setInterval(function () {
 		}
 	}
 	if (pack.size > 0) {
-		console.log(pack)
-
+		// console.log(pack)
 		// io.emit('remoteData', pack);
 		for (const roomID of pack.keys()) {
-			console.log(`roomID: ${roomID}`);
+			// console.log(`roomID: ${roomID}`);
 			io.to(roomID).emit('remoteData', pack.get(roomID));
 		}
 	}
