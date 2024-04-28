@@ -1,5 +1,7 @@
 class Game {
-	constructor() {
+	constructor(modelConfig) {
+		console.log(modelConfig);
+
 		if (!Detector.webgl) Detector.addGetWebGLMessage();
 
 		this.modes = Object.freeze({
@@ -20,6 +22,7 @@ class Game {
 		this.renderer;
 		this.animations = {};
 		this.assetsPath = 'assets/';
+		this.fog;
 
 		this.remotePlayers = [];
 		this.remoteColliders = [];
@@ -92,6 +95,8 @@ class Game {
 		this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 10, 200000);
 
 		this.scene = new THREE.Scene();
+		// this.scene.add();
+		this.scene.fog = new THREE.Fog(0xCCCCCC, 2000, 5000);
 		this.scene.background = new THREE.Color(0x00a0f0);
 
 		const ambient = new THREE.AmbientLight(0xaaaaaa);
@@ -120,7 +125,7 @@ class Game {
 		const loader = new THREE.FBXLoader();
 		const game = this;
 
-		this.player = new PlayerLocal(this);
+		this.player = new PlayerLocal(this, undefined, { model: modelConfig.model, colour: modelConfig.colour });
 
 		this.loadEnvironment(loader);
 
@@ -419,16 +424,29 @@ class Game {
 }
 
 class Player {
-	constructor(game, options) {
+	constructor(game, options, modelConfig) {
 		this.local = true;
 		let model, colour;
 
-		const colours = ['Black', 'Brown', 'White'];
-		colour = colours[Math.floor(Math.random() * colours.length)];
+		if (modelConfig.colour) {
+			console.log("modelConfig.colour", modelConfig.colour)
+			colour = modelConfig.colour;
+		} else {
+			console.log("random colour")
+			const colours = ['Black', 'Brown', 'White'];
+			colour = colours[Math.floor(Math.random() * colours.length)];
+		}
 
 		if (options === undefined) {
-			const people = ['BeachBabe', 'BusinessMan', 'Doctor', 'FireFighter', 'Housewife', 'Policeman', 'Prostitute', 'Punk', 'RiotCop', 'Roadworker', 'Robber', 'Sheriff', 'Streetman', 'Waitress'];
-			model = people[Math.floor(Math.random() * people.length)];
+			if (modelConfig.model) {
+				console.log("modelConfig.model", modelConfig.model)
+				model = modelConfig.model;
+			}
+			else {
+				console.log("random model")
+				const people = ['BeachBabe', 'BusinessMan', 'Doctor', 'FireFighter', 'Housewife', 'Policeman', 'Prostitute', 'Punk', 'RiotCop', 'Roadworker', 'Robber', 'Sheriff', 'Streetman', 'Waitress'];
+				model = people[Math.floor(Math.random() * people.length)];
+			}
 		} else if (typeof options == 'object') {
 			this.local = false;
 			this.options = options;
@@ -540,8 +558,8 @@ class Player {
 }
 
 class PlayerLocal extends Player {
-	constructor(game, model) {
-		super(game, model);
+	constructor(game, model, modelConfig) {
+		super(game, model, modelConfig);
 
 		const player = this;
 		const socket = io.connect();

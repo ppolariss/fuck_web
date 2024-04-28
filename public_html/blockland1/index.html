@@ -92,15 +92,6 @@
 </head>
 
 <body>
-	<div id="message">
-		<p id="message_text"></p>
-		<button id="message_ok">OK</button>
-	</div>
-	<div id="chat">
-		<form id="msg-form" action="">
-			<input id="m" autocomplete="off" /><button>Send</button>
-		</form>
-	</div>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/92/three.min.js"></script>
 	<script src="https://code.jquery.com/jquery-1.11.1.js"></script>
 	<script src="/socket.io/socket.io.js"></script>
@@ -110,9 +101,102 @@
 	<script src="libs/Detector.js"></script>
 	<script src="libs/toon3d.js"></script>
 	<script src="game.js"></script>
+
+	<audio controls autoplay loop src="./audio/the end of the world.mp3"> </audio>
+	<button onclick="showModelList()" id="modelButton">更换模型</button>
+
+	<input type="text" id="textInput" placeholder="请输入房间号">
+	<button id="confirmButton">确认</button>
+
+	<div id="message">
+		<p id="message_text"></p>
+		<button id="message_ok">OK</button>
+	</div>
+	<div id="chat">
+		<form id="msg-form" action="">
+			<input id="m" autocomplete="off" /><button>Send</button>
+		</form>
+	</div>
+
 	<script>
-		var game;
-		document.addEventListener("DOMContentLoaded", function () { game = new Game(); });
+		var showModelList = () => {
+			// 创建模型选择下拉菜单
+			const selectModel = document.createElement('select');
+			selectModel.id = 'selectModel';
+			selectModel.style.margin = '10px';
+
+			// 添加模型选项
+			const models = ['BeachBabe', 'BusinessMan', 'Doctor', 'FireFighter', 'Housewife', 'Policeman', 'Prostitute', 'Punk', 'RiotCop', 'Roadworker', 'Robber', 'Sheriff', 'Streetman', 'Waitress'];
+			models.forEach(model => {
+				const option = document.createElement('option');
+				option.value = model;
+				option.textContent = model;
+				selectModel.appendChild(option);
+			});
+
+			// 创建颜色选择下拉菜单
+			const selectColour = document.createElement('select');
+			selectColour.id = 'selectColour';
+			selectColour.style.margin = '10px';
+
+			// 添加颜色选项
+			const colours = ['Black', 'Brown', 'White'];
+			colours.forEach(colour => {
+				const option = document.createElement('option');
+				option.value = colour;
+				option.textContent = colour;
+				selectColour.appendChild(option);
+			});
+
+			// 添加到页面
+			document.body.appendChild(selectModel);
+			document.body.appendChild(selectColour);
+			document.body.appendChild(confirmButton);
+			// document.getElementById('modelButton').setAttribute('disabled', true);
+		}
+
+		// document.addEventListener("DOMContentLoaded", function () {
+		// 	var game;
+		// 		game = new Game(modelConfig);
+		// 	});
+		document.getElementById('confirmButton').addEventListener('click', function () {
+			const inputValue = document.getElementById('textInput').value.trim();
+
+			// 检查文本框房间号是否为空
+			if (inputValue === '') {
+				alert('请先输入房间号！');
+				return;
+			}
+
+			console.log('输入的房间号是：', inputValue);
+			modelConfig = {
+				room: inputValue,
+			}
+
+			selectModel = document.getElementById('selectModel');
+			selectColour = document.getElementById('selectColour');
+			// console.log('选择的模型：', selectModel.value);
+			// console.log('选择的颜色：', selectColour.value);
+			if (selectModel != undefined) {
+				document.body.removeChild(selectModel);
+				modelConfig.model = selectModel.value;
+			} else {
+				modelConfig.model = '';
+			}
+			if (selectColour != undefined) {
+				document.body.removeChild(selectColour);
+				modelConfig.colour = selectColour.value;
+			} else {
+				modelConfig.colour = '';
+			}
+
+			// 隐藏文本框和确认按钮
+			document.getElementById('modelButton').style.display = 'none';
+			document.getElementById('textInput').style.display = 'none';
+			document.getElementById('confirmButton').style.display = 'none';
+
+			game = new Game(modelConfig);
+		});
 	</script>
 </body>
 
