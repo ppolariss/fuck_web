@@ -96,4 +96,4 @@ setInterval(function () {
 			io.to(roomID).emit('remoteData', pack.get(roomID));
 		}
 	}
-}, 400);
+}, 40);

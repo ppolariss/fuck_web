@@ -132,6 +132,9 @@ class Game {
 		this.speechBubble = new SpeechBubble(this, "", 150);
 		this.speechBubble.mesh.position.set(0, 350, 0);
 
+
+		document.addEventListener('keydown', this.spaceJump.bind(this), false);
+
 		this.joystick = new JoyStick({
 			onMove: this.playerControl,
 			game: this
@@ -151,6 +154,48 @@ class Game {
 
 		window.addEventListener('resize', () => game.onWindowResize(), false);
 	}
+
+	spaceJump(event) {
+		if (event.keyCode != 32) {
+			return;
+		}
+
+		this.player.velocityY = -10;
+		return;
+		// // 如果玩家已经在跳跃中，则直接返回，防止重复跳跃
+		// if (this.player.isJumping) {
+		// 	return;
+		// }
+
+		// // 设定跳跃的高度和速度
+		// const jumpHeight = 100; // 跳跃高度
+		// const jumpSpeed = 5; // 跳跃速度
+
+		// // 获取玩家当前的位置
+		// let initialY = this.player.position.y;
+		// let jumpHeightReached = false;
+
+		// // 定时器，每隔一小段时间提升玩家的高度，直到达到跳跃高度为止
+		// let jumpInterval = setInterval(() => {
+		// 	// 更新玩家的高度
+		// 	this.player.position.y += jumpSpeed;
+
+		// 	// 如果玩家达到跳跃高度，停止定时器，标记达到跳跃高度
+		// 	if (this.player.position.y - initialY >= jumpHeight) {
+		// 		clearInterval(jumpInterval);
+		// 		jumpHeightReached = true;
+		// 	}
+		// }, 10);
+
+		// // 在跳跃动作完成后，将玩家高度恢复到原始高度，并将跳跃状态设置为 false
+		// setTimeout(() => {
+		// 	if (jumpHeightReached) {
+		// 		this.player.position.y = initialY; // 恢复原始高度
+		// 	}
+		// 	this.player.isJumping = false; // 将跳跃状态设置为 false
+		// }, 500); // 假设跳跃动作持续 0.5 秒
+	}
+
 
 	loadEnvironment(loader) {
 		const game = this;
@@ -336,6 +381,7 @@ class Game {
 		raycaster.setFromCamera(mouse, this.camera);
 
 		const intersects = raycaster.intersectObjects(this.remoteColliders);
+		//...this.remoteColliders, ...this.remotePlayers
 		const chat = document.getElementById('chat');
 
 		if (intersects.length > 0) {
@@ -399,7 +445,8 @@ class Game {
 			}
 		}
 
-		if (this.player.motion !== undefined) this.player.move(dt);
+		// if (this.player.motion !== undefined) 
+		this.player.move(dt);
 
 		if (this.cameras != undefined && this.cameras.active != undefined && this.player !== undefined && this.player.object !== undefined) {
 			this.camera.position.lerp(this.cameras.active.getWorldPosition(new THREE.Vector3()), 0.05);
@@ -560,6 +607,7 @@ class Player {
 class PlayerLocal extends Player {
 	constructor(game, model, modelConfig) {
 		super(game, model, modelConfig);
+		// this.dt = game.clock.getDelta();
 
 		const player = this;
 		const socket = io.connect();
@@ -611,6 +659,8 @@ class PlayerLocal extends Player {
 		});
 
 		this.socket = socket;
+
+		// document.addEventListener('keydown', this.jump.bind(this), false);
 	}
 
 	initSocket(roomID) {
@@ -643,6 +693,9 @@ class PlayerLocal extends Player {
 	}
 
 	move(dt) {
+		if (this.motion === undefined)
+			this.motion = { forward: 0, turn: 0 };
+		// console.log(dt)
 		const pos = this.object.position.clone();
 		pos.y += 60;
 		let dir = new THREE.Vector3();
@@ -650,10 +703,13 @@ class PlayerLocal extends Player {
 		if (this.motion.forward < 0) dir.negate();
 		let raycaster = new THREE.Raycaster(pos, dir);
 		let blocked = false;
-		const colliders = this.game.colliders;
+		let colliders = this.game.colliders;
+		const remoteColliders = this.game.remoteColliders;
+		// console.log(typeof player)
+		// colliders = colliders.concat(remoteColliders)
 
 		if (colliders !== undefined) {
-			const intersect = raycaster.intersectObjects(colliders);
+			const intersect = raycaster.intersectObjects([...colliders, ...remoteColliders]);
 			if (intersect.length > 0) {
 				if (intersect[0].distance < 50) blocked = true;
 			}
@@ -702,9 +758,10 @@ class PlayerLocal extends Player {
 				const targetY = pos.y - intersect[0].distance;
 				if (targetY > this.object.position.y) {
 					//Going up
-					this.object.position.y = 0.8 * this.object.position.y + 0.2 * targetY;
+					this.object.position.y = targetY;
+					//0.8 * this.object.position.y + 0.2 *
 					this.velocityY = 0;
-				} else if (targetY < this.object.position.y) {
+				} else if (targetY <= this.object.position.y) {
 					//Falling
 					if (this.velocityY == undefined) this.velocityY = 0;
 					this.velocityY += dt * gravity;
@@ -721,6 +778,8 @@ class PlayerLocal extends Player {
 
 		this.updateSocket();
 	}
+
+	// jump(event) {
 }
 
 class SpeechBubble {
